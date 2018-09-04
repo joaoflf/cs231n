@@ -422,10 +422,6 @@ def conv_backward_naive(dout, cache):
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     x, w, b, conv_param = cache
-    print(dout.shape)
-    print(x.shape)
-    print(w.shape)
-    print(b.shape)
     
     pad = conv_param['pad']
     f_filters, f_channels, f_width, f_height = w.shape
@@ -436,39 +432,46 @@ def conv_backward_naive(dout, cache):
     dw_height = int(1 + (x_height + 2 * pad - dout_height) / conv_param['stride'])
     dw_channels = x_channels
     dw_n = dout_n
-
-    out_width = 3
-    out_height = 3
-    out_channels = 2
     
     x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    dout_padded = np.pad(dout, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
     
     dw_rows = []
+    dx = []
+    w_row = np.flip(w, 2)
+    w_row = np.flip(w_row, 3)
+    w_row = w_row.transpose(1,0,2,3).reshape(f_channels,-1)
+    
+    for m in range(x.shape[0]):
 
-    for m in range(x.shape[1]):
         x_col = []
-        for i in range(dout_height):
+        for i in range(f_height):
             i=i*conv_param['stride']
-            for j in range(dout_width):
+            for j in range(f_width):
                 j=j*conv_param['stride']
-                col = x_padded[m,:,i:i+dw_height,j:j+dw_width].reshape(-1)
+                col = x_padded[m,:,i:i+dout_height,j:j+dout_width].reshape((f_channels,-1))
                 x_col.append(col)
-        x_col = np.array(x_col).T
+        x_col = np.array(x_col)
 
-        dout_row = np.flip(dout[m].reshape(dout_channels, -1),0)
-        dw_rows.append(x_col.dot(dout_row.T))
+        dout_row = dout[m].reshape(dout_channels, -1)
+        dout_row = dout_row.T
+        dw_rows.append(np.tensordot(x_col,dout_row, axes=[[2],[0]]))
+        
+        dout_col = []
+        for i in range(x_height):
+            i=i*conv_param['stride']
+            for j in range(x_width):
+                j=j*conv_param['stride']
+                col = dout_padded[m,:,i:i+f_height,j:j+f_width].reshape((-1))
+                dout_col.append(col)
+        dout_col = np.array(dout_col)
+        dx.append(dout_col.dot(w_row.T))
+    
     dw = np.sum(np.array(dw_rows), axis=0)
     dw = dw.T.reshape(w.shape)
-
+    dx = np.array(dx).transpose(0,2,1).reshape(x.shape)
+    db = np.sum(dout, axis=(0, 2, 3))
     
-    #out = np.array(out)
-    ''' dw = np.array(dw)
-    dw = dw.transpose(1,0,2).reshape(w.shape)
-    dx = w.reshape(f_filters, -1).T.dot(dout_row)
-
-    dx = dx.reshape(x_n, x_channels, x_width+pad, x_height+pad)
-    db = np.sum(dout, axis=(0, 2, 3))'''
-
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
