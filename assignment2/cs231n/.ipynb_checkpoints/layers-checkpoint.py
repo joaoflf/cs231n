@@ -497,11 +497,36 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
-    pass
+    x_m, x_c, x_w, x_h = x.shape
+    stride = pool_param['stride']
+    p_w = pool_param['pool_width']
+    p_h = pool_param['pool_height']
+    
+    o_w = int((x_w - p_w)/stride+1)
+    o_h = int((x_h - p_h)/stride+1)
+    
+    out = np.zeros((x_m, x_c, o_w, o_h))
+    pool_mask = np.zeros(x.shape)
+    for m in range(x_m):
+        for c in range(x_c):
+            for w in range(o_w):
+                w_s= w * stride
+                for h in range(o_h):
+                    h_s= h * stride
+                    x_slice = x[m,c, w_s:w_s+p_w,h_s:h_s+p_h]
+                    #get max value of slice
+                    out[m, c, w, h] = np.amax(x_slice)
+                    #build pool mask to indicate the position of maximum in the input shape
+                    max_i = np.zeros((x_slice.size))
+                    max_i[np.argmax(x_slice)] = 1
+                    max_i = max_i.reshape(x_slice.shape)
+                    pool_mask[m,c, w_s:w_s+p_w,h_s:h_s+p_h] = max_i
+    
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    cache = (x, pool_param)
+    cache = (x, pool_param,pool_mask)
     return out, cache
 
 
@@ -517,10 +542,20 @@ def max_pool_backward_naive(dout, cache):
     - dx: Gradient with respect to x
     """
     dx = None
+    x, pool_param, pool_mask = cache
     ###########################################################################
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
-    pass
+
+    dout_m, dout_c, dout_w, dout_h = dout.shape
+    dx = np.zeros(x.shape)
+    for m in range(dout_m):
+        for c in range(dout_c):
+            #element multiply the pool mask (1s on the positions of max values) with the repeated dout matrix
+            dout_slice= dout[m,c].repeat(2, axis=0).repeat(2, axis=1)
+            pool_mask_slice = pool_mask[m,c]
+            dx[m,c]= np.multiply(dout_slice, pool_mask_slice)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
