@@ -465,6 +465,7 @@ def conv_backward_naive(dout, cache):
                 col = dout_padded[m,:,i:i+f_height,j:j+f_width].reshape((-1))
                 dout_col.append(col)
         dout_col = np.array(dout_col)
+        print(dout_col.shape)
         dx.append(dout_col.dot(w_row.T))
     
     dw = np.sum(np.array(dw_rows), axis=0)
