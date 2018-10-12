@@ -186,6 +186,9 @@ class FullyConnectedNet(object):
             previous_dim = hidden_dims[i-1] if i>0 else input_dim
             self.params['W'+str(i+1)] = np.random.normal(0, weight_scale, (previous_dim, dim))
             self.params['b'+str(i+1)] = np.zeros((dim))
+            if self.use_batchnorm:
+                self.params['gamma'+str(i+1)] = np.ones((dim))
+                self.params['beta'+str(i+1)] = np.zeros((dim))
         #last layer
         self.params['W'+str(self.num_layers)]= np.random.normal(0, weight_scale, (hidden_dims[-1], num_classes))
         self.params['b'+str(self.num_layers)]= np.zeros((num_classes))
@@ -251,9 +254,13 @@ class FullyConnectedNet(object):
         
         last_activation = X
         fc_cache = {}
+        bn_cache = {}
+        relu_cache = {}
         for i in range(1, self.num_layers):
-            last_activation, fc_cache['l'+str(i)] = affine_relu_forward(last_activation, self.params['W'+str(i)], self.params['b'+str(i)])
-
+            a, fc_cache['l'+str(i)] = affine_forward(last_activation, self.params['W'+str(i)], self.params['b'+str(i)])
+            if self.use_batchnorm:
+                a, bn_cache['l'+str(i)] = batchnorm_forward(a, self.params['gamma'+str(i)], self.params['beta'+str(i)], self.bn_params[i-1])
+            last_activation, relu_cache['l'+str(i)] = relu_forward(a)
         scores,fc_cache['l'+str(self.num_layers)] = affine_forward(last_activation, self.params[last_W], self.params[last_b])
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -281,8 +288,14 @@ class FullyConnectedNet(object):
         
         dx, grads[last_W], grads[last_b] = affine_backward(dx, (last_activation, self.params[last_W], self.params[last_b]))
         grads[last_W] += 0.5 * 2 * self.reg * self.params[last_W]
+
         for i in reversed(range(1, self.num_layers)):
-            dx, grads['W'+str(i)], grads['b'+str(i)] = affine_relu_backward(dx, fc_cache['l'+str(i)])
+            dx = relu_backward(dx, relu_cache['l'+str(i)])
+            if self.use_batchnorm:
+                dx, grads['gamma'+str(i)], grads['beta'+str(i)] = batchnorm_backward(dx, bn_cache['l'+str(i)] )
+
+            dx, grads['W'+str(i)], grads['b'+str(i)] = affine_backward(dx, fc_cache['l'+str(i)])
+
             #don't forget to also regularise grads
             grads['W'+str(i)] += 0.5 * 2 * self.reg * self.params['W'+str(i)]
             

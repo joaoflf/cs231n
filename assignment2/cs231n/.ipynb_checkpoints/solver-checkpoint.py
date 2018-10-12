@@ -187,10 +187,9 @@ class Solver(object):
             dw = grads[p]
             config = self.optim_configs[p]
             next_w, next_config = self.update_rule(w, dw, config)
-            print(self.update_rule)
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
-
+        
 
     def _save_checkpoint(self):
         if self.checkpoint_name is None: return
