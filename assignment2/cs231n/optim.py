@@ -64,7 +64,8 @@ def sgd_momentum(w, dw, config=None):
     # TODO: Implement the momentum update formula. Store the updated value in #
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
-    pass
+    v = config['momentum'] * v - config['learning_rate'] * dw
+    next_w = w + v
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -91,14 +92,16 @@ def rmsprop(x, dx, config=None):
     config.setdefault('decay_rate', 0.99)
     config.setdefault('epsilon', 1e-8)
     config.setdefault('cache', np.zeros_like(x))
-
+    
     next_x = None
     ###########################################################################
     # TODO: Implement the RMSprop update formula, storing the next value of x #
     # in the next_x variable. Don't forget to update cache value stored in    #
     # config['cache'].                                                        #
     ###########################################################################
-    pass
+    cache = config['decay_rate']*config['cache'] + (1-config['decay_rate']) * dx**2
+    next_x = x - config['learning_rate'] * (dx/np.sqrt(cache+config['epsilon']))
+    config['cache'] = cache
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -128,14 +131,25 @@ def adam(x, dx, config=None):
     config.setdefault('m', np.zeros_like(x))
     config.setdefault('v', np.zeros_like(x))
     config.setdefault('t', 1)
-
+    m = config['m']
+    v = config['v']
+    t = config['t']
+    beta1 = config['beta1']
+    beta2 = config['beta2']
     next_x = None
     ###########################################################################
     # TODO: Implement the Adam update formula, storing the next value of x in #
     # the next_x variable. Don't forget to update the m, v, and t variables   #
     # stored in config.                                                       #
     ###########################################################################
-    pass
+    m = beta1*m + (1-beta1) * dx
+    m_hat = m/(1-beta1**t)
+    v = beta2*v + (1-beta2) * dx**2
+    v_hat = v/(1-beta2**t)
+    
+    next_x = x - config['learning_rate'] *(m_hat/np.sqrt(v_hat+config['epsilon']))
+    config['v'] = v
+    config['m'] = m
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
